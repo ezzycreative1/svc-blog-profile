@@ -24,14 +24,14 @@ func RequestID(next fiber.Handler) fiber.Handler {
 }
 
 func GetID(ctx *fiber.Ctx) string {
-	requestID, ok := ctx.Get(requestIDKey).(string)
+	requestID, ok := ctx.Locals(requestIDKey).(string)
 	if !ok {
 		return ""
 	}
 	return requestID
 }
 
-// Because echo request context is not included value from echo.Context
+// Because fiber request context is not included value from echo.Context
 // we need to build this method, hiks.
 type keyCtx string
 
