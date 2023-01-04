@@ -39,12 +39,12 @@ make db/migrations/new name=create_iap_table
 ## EXECUTING MIGRATIONS
 Eksekusi migrasi UP  
 ```shell
-migrate -path ./migrations -database ${POKEMON_DB_DSN} up
+migrate -path ./migrations -database ${BLOG_DB_DSN} up
 ```
 
 Eksekusi migrasi DOWN
 ```shell
-migrate -path ./migrations -database ${POKEMON_DB_DSN} down
+migrate -path ./migrations -database ${BLOG_DB_DSN} down
 ```
 
 untuk mengeksekusi migrasi dapat menggunakan makefile dengan perintah

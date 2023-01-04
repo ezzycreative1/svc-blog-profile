@@ -1,10 +1,12 @@
 package handler
 
 import (
+	"fmt"
 	"net/http"
 
 	"github.com/ezzycreative1/svc-blog-profile/config"
-	"github.com/ezzycreative1/svc-blog-profile/internal/core/ports"
+	"github.com/ezzycreative1/svc-blog-profile/internal/domain/model/dtos"
+	"github.com/ezzycreative1/svc-blog-profile/internal/domain/ports"
 	"github.com/ezzycreative1/svc-blog-profile/pkg/mid"
 	"github.com/ezzycreative1/svc-blog-profile/pkg/mlog"
 	"github.com/ezzycreative1/svc-blog-profile/pkg/mvalidator"
@@ -36,15 +38,31 @@ func NewBlogHandler(
 //Handler User
 func (gh *BlogHandler) Register(ctx *fiber.Ctx) error {
 	requestID := mid.GetID(ctx)
+	fmt.Println(requestID)
 	userCtx := mid.SetIDx(ctx.Context(), requestID)
 
-	listAr, err := gh.UseCaseUsers.Register(userCtx)
+	var payload dtos.Register
+	if err := ctx.BodyParser(&payload); err != nil {
+		gh.Logger.WarnT(requestID, fmt.Sprintf("register payload: %s", err.Error()), mlog.Any("payload", payload))
+		return web.ResponseFormatter(ctx, http.StatusBadRequest, "Bad Request", nil, err)
+	}
+
+	// log payload
+	gh.Logger.InfoT(requestID, "register request", mlog.Any("payload", payload))
+
+	// Validate slice payload
+	mapErr, err := gh.Validator.Struct(payload)
 	if err != nil {
-		gh.Logger.ErrorT(requestID, "error fetch data", err)
+		gh.Logger.WarnT(requestID, fmt.Sprintf("Bad Request: %s", err.Error()))
+		return web.ResponseErrValidation(ctx, "bad request", mapErr)
+	}
+
+	if err := gh.UseCaseUsers.Register(userCtx, payload); err != nil {
+		gh.Logger.ErrorT(requestID, "error register data", err)
 		return web.ResponseFormatter(ctx, http.StatusBadRequest, err.Error(), nil, err)
 	}
 
-	return web.ResponseFormatter(ctx, http.StatusOK, "Success", listAr, nil)
+	return web.ResponseFormatter(ctx, http.StatusOK, "Success", nil, nil)
 }
 
 // func (ch *BlogHandler) GetRoleByID(ctx *fiber.Ctx) error {

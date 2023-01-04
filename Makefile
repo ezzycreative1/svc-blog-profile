@@ -47,7 +47,7 @@ db/migrations/new:
 .PHONY: db/migrations/up
 db/migrations/up: confirm
 	@echo 'Running up migrations...'
-	migrate -path ./migrations -database '${COGS_DB_DSN}' up
+	migrate -path ./migrations -database '${BLOG_DB_DSN}' up
 
 # ==================================================================================== #
 # QUALITY CONTROL

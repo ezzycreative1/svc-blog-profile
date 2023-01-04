@@ -60,7 +60,7 @@ func main() {
 	go func() {
 		if err := f.Listen(fmt.Sprintf("0.0.0.0:%v", cfg.Blog.HTTPPort)); err != nil && err != http.ErrServerClosed {
 			logger.Info("shutting down the server")
-			panic(fmt.Sprintf("echo server startup panic: %s", err))
+			panic(fmt.Sprintf("server startup panic: %s", err))
 		}
 	}()
 
@@ -72,7 +72,7 @@ func main() {
 
 	// gracefull shutdown stage ===============================================
 
-	logger.Info("shutdown echo server...")
+	logger.Info("shutdown server...")
 	_, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
 	if err := f.Shutdown(); err != nil {

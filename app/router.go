@@ -3,6 +3,9 @@ package main
 import (
 	"net/http"
 
+	"github.com/ezzycreative1/svc-blog-profile/app/v1/handler"
+	"github.com/ezzycreative1/svc-blog-profile/internal/domain/usecase"
+	"github.com/ezzycreative1/svc-blog-profile/internal/infrastructure/persistence/mysql"
 	"github.com/ezzycreative1/svc-blog-profile/pkg/web"
 	"github.com/gofiber/fiber/v2"
 )
@@ -10,28 +13,26 @@ import (
 func LoadRoute(app *app) {
 	// init dependency
 	// roleRepos := mysql.NewMysqlRolesRepo(app.database)
-	// userRepos := mysql.NewMysqlUserRepo(app.database)
+	userRepos := mysql.NewUserRepository(app.database, "blog-ctx", 10)
 	// pokeRepos := mysql.NewMysqlPokemonRepo(app.database)
 	// pokeExternalRepos := external.NewExternalPokeRepo()
 	// roleUCase := usecase.NewRolesUsecase(
 	// 	&roleRepos,
 	// )
-	// userUCase := usecase.NewUserUsecase(
-	// 	&userRepos,
-	// )
+	userUCase := usecase.NewUserUsecase(
+		userRepos,
+	)
 	// pokemonUCase := usecase.NewPokemonUsecase(
 	// 	&pokeRepos,
 	// 	&pokeExternalRepos,
 	// )
 	// create handler
-	// pokemonHandler := handler.NewPokemonHandler(
-	// 	&roleUCase,
-	// 	&userUCase,
-	// 	&pokemonUCase,
-	// 	app.validator,
-	// 	app.logger,
-	// 	*app.cfg,
-	// )
+	blogHandler := handler.NewBlogHandler(
+		userUCase,
+		app.validator,
+		app.logger,
+		*app.cfg,
+	)
 
 	// init additional middleware here or directly in route (ex. JWT, api key)
 	// ...
@@ -42,9 +43,9 @@ func LoadRoute(app *app) {
 		return web.ResponseFormatter(c, http.StatusOK, "Success", map[string]any{"status": "ok"}, nil)
 	})
 
-	//g := app.fiber.Group("/v1/pokemon")
+	g := app.fiber.Group("/v1/blog")
 	//router role
-	// g.POST("/role", pokemonHandler.StoreRole)
+	g.Post("/user", blogHandler.Register)
 	// g.GET("/roles", pokemonHandler.FetchRoles)
 	// g.PUT("/role/:id", pokemonHandler.UpdateRole)
 	// g.GET("/role/:id", pokemonHandler.GetRoleByID)
