@@ -7,5 +7,6 @@ import (
 )
 
 type IUserUsecase interface {
-	Register(ctx context.Context, input dtos.Register) error
+	Register(ctx context.Context, input dtos.RegisterRequestBody) error
+	Login(ctx context.Context, input dtos.LoginRequestBody) (*dtos.LoginResponseBody, error)
 }

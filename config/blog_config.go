@@ -69,3 +69,9 @@ type Redis struct {
 type BlogConfig struct {
 	HTTPPort int `json:"http_port,omitempty"`
 }
+
+type Jwt struct {
+	Secret           string
+	AccessExpireMin  int
+	RefreshExpireMin int
+}

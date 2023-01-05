@@ -9,6 +9,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/ezzycreative1/svc-blog-profile/config"
 	"github.com/gofiber/fiber/v2"
 	"github.com/golang-jwt/jwt"
 	"golang.org/x/crypto/bcrypt"
@@ -40,13 +41,39 @@ type UserAuth struct {
 }
 
 // GenerateToken ..
-func GenerateToken(email string, userid int64) (string, error) {
-	claims := jwt.MapClaims{}
-	claims["authorized"] = true
-	claims["user_id"] = userid
-	claims["exp"] = time.Now().Add(72 * time.Hour).Unix()
-	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
-	return token.SignedString([]byte(os.Getenv("API_SECRET")))
+// func GenerateToken(email string, userid int64) (string, error) {
+// 	claims := jwt.MapClaims{}
+// 	claims["authorized"] = true
+// 	claims["user_id"] = userid
+// 	claims["exp"] = time.Now().Add(72 * time.Hour).Unix()
+// 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
+// 	return token.SignedString([]byte(os.Getenv("API_SECRET")))
+// }
+
+func GenerateToken(userID int64, tokenType string) (string, error) {
+	var config config.Jwt
+
+	claims := jwt.MapClaims{
+		"user_id": userID,
+		"type":    tokenType,
+		"admin":   false,
+		"iss":     "blog-api",
+		"iat":     time.Now().Unix(),
+	}
+	if tokenType == "access" {
+		claims["exp"] = time.Now().Add(time.Minute * time.Duration(config.AccessExpireMin)).Unix()
+	} else if tokenType == "refresh" {
+		claims["exp"] = time.Now().Add(time.Minute * time.Duration(config.RefreshExpireMin)).Unix()
+	} else {
+		return "Please pass access or refresh in tokenType", nil
+	}
+	t := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
+
+	token, err := t.SignedString([]byte(config.Secret))
+	if err != nil {
+		return "", err
+	}
+	return token, nil
 }
 
 // TokenValid ..

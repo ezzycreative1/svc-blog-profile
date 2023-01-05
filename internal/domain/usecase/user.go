@@ -2,12 +2,15 @@ package usecase
 
 import (
 	"context"
+	"regexp"
 	"time"
 
 	"github.com/ezzycreative1/svc-blog-profile/internal/domain/model/dtos"
 	"github.com/ezzycreative1/svc-blog-profile/internal/domain/model/entities"
 	"github.com/ezzycreative1/svc-blog-profile/internal/domain/ports"
+	"github.com/ezzycreative1/svc-blog-profile/pkg/errs"
 	"github.com/ezzycreative1/svc-blog-profile/pkg/mid"
+	"github.com/ezzycreative1/svc-blog-profile/pkg/mvalidator"
 )
 
 type userUseCase struct {
@@ -20,8 +23,39 @@ func NewUserUsecase(repo ports.IUserRepository) *userUseCase {
 	}
 }
 
-func (uc *userUseCase) Register(ctx context.Context, input dtos.Register) error {
-	password, _ := mid.HashPassword(input.Password)
+// PasswordValidator - validates the password.
+func (uc *userUseCase) passwordValidator(password string) (bool, error) {
+	switch {
+	case len(password) < 8:
+		return false, errs.ErrPasswordLessContain
+	case len(password) > 128:
+		return false, errs.ErrPasswordLongContain
+	case !regexp.MustCompile(`[A-Z]+`).MatchString(password):
+		return false, errs.ErrPasswordUppercaseContain
+	case !regexp.MustCompile(`[a-z]+`).MatchString(password):
+		return false, errs.ErrPasswordLowercaseContain
+	case !regexp.MustCompile(`\d+`).MatchString(password):
+		return false, errs.ErrPasswordOneNumberContain
+	case !regexp.MustCompile(`[!@#~$%^&*()+|_]{1}`).MatchString(password):
+		return false, errs.ErrPasswordSpecialCharContain
+	default:
+		return true, nil
+	}
+}
+
+func (uc *userUseCase) Register(ctx context.Context, input dtos.RegisterRequestBody) error {
+	if input.Password != input.ConfirmPassword {
+		return errs.ErrPasswordMatch
+	}
+
+	if validated, err := uc.passwordValidator(input.Password); !validated {
+		return err
+	}
+
+	password, err := mid.HashPassword(input.Password)
+	if err != nil {
+		return err
+	}
 
 	data := entities.Users{
 		FirstName: input.Firstname,
@@ -33,8 +67,49 @@ func (uc *userUseCase) Register(ctx context.Context, input dtos.Register) error 
 		UpdatedAt: time.Now(),
 	}
 
-	if err := uc.Repo.Store(ctx, data); err != nil {
+	if err := uc.Repo.StoreUser(ctx, data); err != nil {
 		return err
 	}
 	return nil
+}
+
+func (uc *userUseCase) Login(ctx context.Context, input dtos.LoginRequestBody) (*dtos.LoginResponseBody, error) {
+	if input.Email == "" && input.Password == "" {
+		return nil, errs.ErrBadParamInput
+	}
+
+	checkEmail := mvalidator.ValidEmail(input.Email)
+	if !checkEmail {
+		return nil, errs.ErrEmailWrong
+	}
+
+	//validation user
+	userData, err := uc.Repo.GetUserByEmail(ctx, input.Email)
+	if err != nil {
+		return nil, errs.ErrNotFound
+	}
+
+	checkPassword := mid.CheckPasswordHash(input.Password, userData.Password)
+	if !checkPassword {
+		// check key exis
+		return nil, errs.ErrBadParamInput
+	}
+
+	// Getting Access Token
+	access_token, err := mid.GenerateToken(userData.ID, "access")
+	if err != nil {
+		return nil, err
+	}
+
+	// Getting Refresh Token
+	refresh_token, err := mid.GenerateToken(userData.ID, "refresh")
+	if err != nil {
+		return nil, err
+	}
+
+	response := dtos.LoginResponseBody{
+		AccessToken:  access_token,
+		RefreshToken: refresh_token,
+	}
+	return &response, nil
 }

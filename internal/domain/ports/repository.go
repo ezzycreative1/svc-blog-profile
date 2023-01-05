@@ -7,5 +7,7 @@ import (
 )
 
 type IUserRepository interface {
-	Store(ctx context.Context, input entities.Users) error
+	GetUserById(ctx context.Context, UserID int64) (*entities.Users, error)
+	GetUserByEmail(ctx context.Context, Email string) (*entities.Users, error)
+	StoreUser(ctx context.Context, input entities.Users) error
 }

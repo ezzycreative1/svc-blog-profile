@@ -11,6 +11,7 @@ type Group struct {
 	Server   Server     `json:"server,omitempty"`
 	Database Database   `json:"database,omitempty"`
 	Redis    Redis      `json:"redis,omitempty"`
+	Jwt      Jwt        `json:"jwt,omitempty"`
 	Blog     BlogConfig `json:"pokemon,omitempty"`
 }
 
@@ -52,6 +53,11 @@ func LoadConfig() *Group {
 			Password: envar.GetEnv("REDIS_PASSWORD", ""),
 			DB:       envar.GetEnv("REDIS_DB", 4),
 			UseTLS:   envar.GetEnv("REDIS_USE_TLS", false),
+		},
+		Jwt: Jwt{
+			Secret:           envar.GetEnv("JWT_SECRET", "secret"),
+			AccessExpireMin:  envar.GetEnv("JWT_ACCESS_EXPIRE_MIN", 15),
+			RefreshExpireMin: envar.GetEnv("JWT_REFRESH_EXPIRE_MIN", 60*24*3),
 		},
 	}
 }

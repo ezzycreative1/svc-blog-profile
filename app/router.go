@@ -10,23 +10,17 @@ import (
 	"github.com/gofiber/fiber/v2"
 )
 
+const (
+	keyTransaction = "blog-ctx"
+	timeout        = 10
+)
+
 func LoadRoute(app *app) {
 	// init dependency
-	// roleRepos := mysql.NewMysqlRolesRepo(app.database)
-	userRepos := mysql.NewUserRepository(app.database, "blog-ctx", 10)
-	// pokeRepos := mysql.NewMysqlPokemonRepo(app.database)
-	// pokeExternalRepos := external.NewExternalPokeRepo()
-	// roleUCase := usecase.NewRolesUsecase(
-	// 	&roleRepos,
-	// )
+	userRepos := mysql.NewUserRepository(app.database, keyTransaction, timeout)
 	userUCase := usecase.NewUserUsecase(
 		userRepos,
 	)
-	// pokemonUCase := usecase.NewPokemonUsecase(
-	// 	&pokeRepos,
-	// 	&pokeExternalRepos,
-	// )
-	// create handler
 	blogHandler := handler.NewBlogHandler(
 		userUCase,
 		app.validator,
@@ -46,6 +40,7 @@ func LoadRoute(app *app) {
 	g := app.fiber.Group("/v1/blog")
 	//router role
 	g.Post("/user", blogHandler.Register)
+	g.Post("/user/login", blogHandler.Login)
 	// g.GET("/roles", pokemonHandler.FetchRoles)
 	// g.PUT("/role/:id", pokemonHandler.UpdateRole)
 	// g.GET("/role/:id", pokemonHandler.GetRoleByID)
