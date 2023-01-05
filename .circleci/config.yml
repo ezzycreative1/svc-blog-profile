@@ -8,7 +8,8 @@ jobs:
   build:
     docker:
       - image: cimg/go:1.19.0
-
+    
+    machine: true
     working_directory: /workspace/go/src/github.com/ezzycreative1/svc-blog-profile
     steps:
       - checkout
