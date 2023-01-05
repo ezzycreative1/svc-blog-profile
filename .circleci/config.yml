@@ -1,42 +1,464 @@
-# Use the latest 2.1 version of CircleCI pipeline process engine.
-# See: https://circleci.com/docs/2.0/configuration-reference
+# This code is licensed from CircleCI to the user under the MIT license.
+# See here for details: https://circleci.com/developer/orbs/licensing
 version: 2.1
+description: |
+    Easily install and use the Heroku CLI with CircleCI to build, test, and deploy your applications to Heroku.
+display:
+    home_url: https://www.heroku.com/
+    source_url: https://github.com/CircleCI-Public/heroku-orb
+commands:
+    check-authentication:
+        description: |
+            Verifies the Heroku API key has been added so we can authenticate.
+        parameters:
+            print-whoami:
+                default: false
+                description: Print the result of heroku auth:whoami.
+                type: boolean
+        steps:
+            - run:
+                command: |
+                    #!/bin/bash
 
-# Define a job to be invoked later in a workflow.
-# See: https://circleci.com/docs/2.0/configuration-reference/#jobs
+                    if [[ $HEROKU_API_KEY == "" ]]; then
+                      echo "No Heroku API key set, please set the HEROKU_API_KEY environment variable."
+                      echo "This can be found by running the $(heroku auth:token) command locally."
+                      exit 1
+                    else
+                      echo "Heroku API key found."
+                    fi
+                environment:
+                    PARAM_WHOAMI: <<parameters.print-whoami>>
+                name: Verify HEROKU_API_KEY is set
+    create-review:
+        description: |
+            Deploys a new review app. Artifacts for creating the review should be saved in a prior step.
+        parameters:
+            artifact-pattern:
+                description: RegEx or filename of artifact to deploy to Heroku.
+                type: string
+            circleci-api-key:
+                default: CIRCLE_TOKEN
+                description: Environment variable containing the Heroku API key
+                type: env_var_name
+            heroku-api-key:
+                default: HEROKU_API_KEY
+                description: The name of the environment variable containing your Heroku API Key.
+                type: env_var_name
+            pipeline:
+                description: Heroku pipeline to deploy with (UUID).
+                type: string
+        steps:
+            - run:
+                command: |
+                    #!/bin/bash
+
+                    CIRCLE_TOKEN_FETCHED=$(eval echo "${PARAM_CIRCLE_TOKEN}")
+                    HEROKU_KEY_FETCHED=$(eval echo "${PARAM_HEROKU_KEY}")
+
+                    if [ -z "$CIRCLE_TOKEN_FETCHED" ]; then
+                      echo "CircleCI token is not set"
+                      exit 1
+                    fi
+                    if [ -z "$HEROKU_KEY_FETCHED" ]; then
+                      echo "Heroku API key is not set"
+                      exit 1
+                    fi
+
+                    function get_artifacts {
+                      artifact_res_tmpfile=$(mktemp)
+                      artifact_request=$(curl -s -o "${artifact_res_tmpfile}" -w "%{http_code}" --retry 5 \
+                          --url "https://circleci.com/api/v2/project/gh/${CIRCLE_PROJECT_USERNAME}/${CIRCLE_PROJECT_REPONAME}/${CIRCLE_BUILD_NUM}/artifacts" \
+                          --header "Circle-Token: ${CIRCLE_TOKEN_FETCHED}")
+                      artifact_results=$(cat "${artifact_res_tmpfile}")
+                      if [ "${artifact_request}" != "200" ]; then
+                        echo "Error fetching artifacts"
+                        echo
+                        echo "$artifact_results"
+                        exit 1
+                      fi
+
+                      for row in $(echo "${artifact_results}" | jq -c '.items[]'); do
+                        _jq() {
+                         echo "${row}" | jq -r "${1}"
+                        }
+                        # shellcheck disable=SC2053
+                        if [[ $(_jq '.path') == $PARAM_ARTIFACT_PATTERN ]]; then
+                          ARTIFACT_LOCATION=$(_jq '.url')
+                          echo "Using ${ARTIFACT_LOCATION} as artifact."
+                          return 0
+                        fi
+                        echo "No artifacts found!"
+                        echo
+                        echo "$artifact_results"
+                        return 1
+                      done
+                    }
+
+                    function create {
+                      heroku_request=$(curl -n -X POST 'https://api.heroku.com/review-apps' \
+                        -d "{
+                          \"branch\": \"${CIRCLE_BRANCH}\",
+                          \"pipeline\": \"${HEROKU_PIPELINE}\",
+                          \"source_blob\": {
+                            \"url\": \"${ARTIFACT_LOCATION}?circle-token=${CIRCLE_TOKEN_FETCHED}\",
+                            \"version\": \"${CIRCLE_SHA1}\"
+                          }
+                        }" \
+                        -H "Content-Type: application/json" \
+                        -H "Accept: application/vnd.heroku+json; version=3" \
+                        -H "Authorization: Bearer ${HEROKU_KEY_FETCHED}")
+
+                      echo "$heroku_request" | jq -C
+                    }
+
+                    get_artifacts
+                    create
+                environment:
+                    PARAM_ARTIFACT_PATTERN: <<parameters.artifact-pattern>>
+                    PARAM_CIRCLE_TOKEN: <<parameters.circleci-api-key>>
+                    PARAM_HEROKU_KEY: <<parameters.heroku-api-key>>
+                    PARAM_HEROKU_PIPELINE: <<parameters.pipeline>>
+                name: Create new Heroku Review app
+    deploy-via-git:
+        description: |
+            Use Git to push the changes of the current tag or branch to Heroku for deployment.
+        parameters:
+            api-key:
+                default: HEROKU_API_KEY
+                description: The name of the environment variable containing your Heroku API Key.
+                type: env_var_name
+            app-name:
+                default: $HEROKU_APP_NAME
+                description: The name of your Heroku app. May also refer to an environment variable.
+                type: string
+            branch:
+                default: $CIRCLE_BRANCH
+                description: Deploy the given branch. The default value is your current branch. Accepts strings which may contain an environment variable.
+                type: string
+            force:
+                default: false
+                description: Whether or not to force the git push (i.e. `git push -f`). Defaults to false.
+                type: boolean
+            maintenance-mode:
+                default: false
+                description: Use this to automatically enable maintenance mode before pre-deploy steps and have it disabled after post-deploy steps have been run.
+                type: boolean
+            no_output_timeout:
+                default: 10m
+                description: Allows you to specify the no_output_timeout for the `git push` to heroku. Defaults to 10m.
+                type: string
+            tag:
+                default: $CIRCLE_TAG
+                description: Deploy the given tag. The default value is your current tag.
+                type: string
+        steps:
+            - when:
+                condition: << parameters.maintenance-mode >>
+                steps:
+                    - run:
+                        command: heroku maintenance:on --app << parameters.app-name >>
+                        name: Turn ON maintenance mode.
+            - run:
+                command: |-
+                    #!/bin/bash
+
+                    PARAM_DEPLOY_TAG=$(eval echo "${PARAM_DEPLOY_TAG}")
+                    PARAM_APP_NAME=$(eval echo "${PARAM_APP_NAME}")
+                    PARAM_HEROKU_API_KEY=${!PARAM_HEROKU_API_KEY}
+                    PARAM_DEPLOY_BRANCH=$(eval echo "${PARAM_DEPLOY_BRANCH}")
+
+                    if [ "$PARAM_FORCE_PUSH" == "1" ];then
+                      force="-f"
+                    fi
+
+                    heroku_url="https://heroku:${PARAM_HEROKU_API_KEY}@git.heroku.com/${PARAM_APP_NAME}.git"
+                    echo "$heroku_url" > /tmp/orblog.txt
+
+                    if [ -n "$PARAM_DEPLOY_BRANCH" ]; then
+                      git push $force "$heroku_url" "$PARAM_DEPLOY_BRANCH:main"
+                    elif [ -n "$PARAM_DEPLOY_TAG" ]; then
+                      git push $force "$heroku_url" "${PARAM_DEPLOY_TAG}^{}:main"
+                    else
+                      echo "No branch or tag found."
+                      exit 1
+                    fi
+                environment:
+                    PARAM_APP_NAME: <<parameters.app-name>>
+                    PARAM_DEPLOY_BRANCH: <<parameters.branch>>
+                    PARAM_DEPLOY_TAG: <<parameters.tag>>
+                    PARAM_FORCE_PUSH: <<parameters.force>>
+                    PARAM_HEROKU_API_KEY: <<parameters.api-key>>
+                    PARAM_MAINTENANCE_MODE: <<parameters.maintenance-mode>>
+                    PARAM_NO_OUTPUT_TIMEOUT: <<parameters.no_output_timeout>>
+                name: Deploy branch or tag to Heroku via git push
+                no_output_timeout: << parameters.no_output_timeout >>
+            - when:
+                condition: << parameters.maintenance-mode >>
+                steps:
+                    - run:
+                        command: heroku maintenance:off --app << parameters.app-name >>
+                        name: Turn OFF maintenance mode.
+    install:
+        description: |
+            Download and install the Heroku CLI. Will be skipped if the CLI is already installed in the system.
+        steps:
+            - run:
+                command: |-
+                    #!/bin/bash
+
+                    if ! command -v heroku &> /dev/null; then
+                      curl https://cli-assets.heroku.com/install.sh | sh
+                    else
+                      echo "Heroku is already installed. No operation was performed."
+                    fi
+                name: Install Heroku CLI (If not installed)
+    push-docker-image:
+        description: |
+            Push a Docker image to the Heroku Docker registry.
+        parameters:
+            api-key:
+                default: HEROKU_API_KEY
+                description: The name of the environment variable containing your Heroku API Key.
+                type: env_var_name
+            app-name:
+                default: $HEROKU_APP_NAME
+                description: The name of your Heroku app. May also refer to an environment variable.
+                type: string
+            no_output_timeout:
+                default: 10m
+                description: Allows you to specify the no_output_timeout for the `git push` to heroku. Defaults to 10m.
+                type: string
+            process-types:
+                default: ""
+                description: Process types.
+                type: string
+            recursive:
+                default: false
+                description: Push all Dockerfiles in the directory to Heroku.
+                type: boolean
+        steps:
+            - run:
+                command: heroku container:login
+                name: Login to Heroku Docker image registry
+            - run:
+                command: |-
+                    #!/bin/bash
+
+                    PARAM_HEROKU_API_KEY="${!PARAM_HEROKU_API_KEY}"
+
+                    if [ "$PARAM_RECURSIVE" == "1" ];then
+                      set -- "$@" --resursive
+                    fi
+
+                    set -x
+                    heroku container:push -a "$PARAM_APP_NAME" "$@" "$PARAM_PROCESS_TYPES"
+                    set +x
+                environment:
+                    PARAM_APP_NAME: <<parameters.app-name>>
+                    PARAM_HEROKU_API_KEY: <<parameters.api-key>>
+                    PARAM_PROCESS_TYPES: <<parameters.process-types>>
+                    PARAM_RECURSIVE: <<parameters.recursive>>
+                name: Push Docker image to Heroku
+                no_output_timeout: << parameters.no_output_timeout >>
+    release-docker-image:
+        description: |
+            Release a Docker image from the Heroku Docker registry.
+        parameters:
+            api-key:
+                default: HEROKU_API_KEY
+                description: The name of the environment variable containing your Heroku API Key.
+                type: env_var_name
+            app-name:
+                default: $HEROKU_APP_NAME
+                description: The name of your Heroku app. May also refer to an environment variable.
+                type: string
+            no_output_timeout:
+                default: 10m
+                description: Allows you to specify the no_output_timeout for the `git push` to heroku. Defaults to 10m.
+                type: string
+            process-types:
+                default: web
+                description: Process types.
+                type: string
+        steps:
+            - run:
+                command: heroku container:login
+                name: Login to Heroku Docker image registry
+            - run:
+                command: |-
+                    #!/bin/bash
+
+                    heroku container:release -a "$PARAM_APP_NAME" "$PARAM_PROCESS_TYPES"
+                environment:
+                    PARAM_APP_NAME: <<parameters.app-name>>
+                    PARAM_PROCESS_TYPES: <<parameters.process-types>>
+                name: Release Docker image to Heroku
+                no_output_timeout: << parameters.no_output_timeout >>
+executors:
+    default:
+        description: |
+            A highly efficient and cached Ubuntu-based image. Consider using this executor or selecting an image for your language https://hub.docker.com/r/cimg/
+        docker:
+            - image: cimg/base:<<parameters.tag>>
+        parameters:
+            tag:
+                default: current
+                description: |
+                    Pick a specific cimg/base tag: https://hub.docker.com/r/cimg/base/tags
+                type: string
 jobs:
-  build:
-    working_directory: ~/repo
-    # Specify the execution environment. You can specify an image from Dockerhub or use one of our Convenience Images from CircleCI's Developer Hub.
-    # See: https://circleci.com/docs/2.0/configuration-reference/#docker-machine-macos-windows-executor
-    docker:
-      - image: circleci/golang:1.15.8
-    # Add steps to the job
-    # See: https://circleci.com/docs/2.0/configuration-reference/#steps
-    steps:
-      - checkout
-      - restore_cache:
-          keys:
-            - go-mod-v4-{{ checksum "go.sum" }}
-      - run:
-          name: Install Dependencies
-          command: go get ./...
-      - save_cache:
-          key: go-mod-v4-{{ checksum "go.sum" }}
-          paths:
-            - "/go/pkg/mod"
-      - run:
-          name: Run tests
-          command: |
-            mkdir -p /tmp/test-reports
-            gotestsum --junitfile /tmp/test-reports/unit-tests.xml
-      - store_test_results:
-          path: /tmp/test-reports
+    deploy-via-git:
+        description: |
+            Use Git to push the changes of the current tag or branch to Heroku for deployment.
+        executor: default
+        parameters:
+            api-key:
+                default: HEROKU_API_KEY
+                description: The name of the environment variable containing your Heroku API Key.
+                type: env_var_name
+            app-name:
+                default: HEROKU_APP_NAME
+                description: Add the name of your application to an environment variable with this name.
+                type: string
+            branch:
+                default: $CIRCLE_BRANCH
+                description: Deploy the given branch. The default value is your current branch. Accepts strings which may contain an environment variable.
+                type: string
+            force:
+                default: false
+                description: Whether or not to force the git push (i.e. `git push -f`). Defaults to false.
+                type: boolean
+            maintenance-mode:
+                default: false
+                description: Use this to automatically enable maintenance mode before pre-deploy steps and have it disabled after post-deploy steps have been run.
+                type: boolean
+            no_output_timeout:
+                default: 10m
+                description: Allows you to specify the no_output_timeout for the `git push` to heroku. Defaults to 10m.
+                type: string
+            post-deploy:
+                default: []
+                description: A list of post-deploy steps that are run after deployment. This would be an ideal place to scale any processes back up.
+                type: steps
+            pre-deploy:
+                default: []
+                description: A list of pre-deploy steps that are run before deployment. This would be an ideal place to scale any processes down.
+                type: steps
+            tag:
+                default: $CIRCLE_TAG
+                description: Deploy the given tag. The default value is your current tag.
+                type: string
+        steps:
+            - install
+            - check-authentication
+            - checkout
+            - steps: << parameters.pre-deploy >>
+            - deploy-via-git:
+                api-key: << parameters.api-key >>
+                app-name: << parameters.app-name >>
+                branch: << parameters.branch >>
+                force: << parameters.force >>
+                maintenance-mode: << parameters.maintenance-mode >>
+                no_output_timeout: << parameters.no_output_timeout >>
+                tag: << parameters.tag >>
+            - steps: << parameters.post-deploy >>
+    push-docker-image:
+        description: |
+            Quickly and easily take the changes to this branch and deploy them to Heroku automatically with this job.
+        executor: default
+        parameters:
+            app-name:
+                default: $HEROKU_APP_NAME
+                description: The name of your Heroku App. For backwards compatibility the literal value `$HEROKU_APP_NAME` is the default, so you can easily use this command by setting an environment variable called HEROKU_APP_NAME
+                type: string
+            maintenance-mode:
+                default: false
+                description: Use this to automatically enable maintenance mode before pre-deploy steps and have it disabled after post-deploy steps have been run.
+                type: boolean
+            post-deploy:
+                default: []
+                description: A list of post-deploy steps that are run after deployment. This would be an ideal place to scale any processes back up.
+                type: steps
+            pre-deploy:
+                default: []
+                description: A list of pre-deploy steps that are run before deployment. This would be an ideal place to scale any processes down.
+                type: steps
+        steps:
+            - install
+            - check-authentication
+            - checkout
+            - steps: << parameters.pre-deploy >>
+            - push-docker-image:
+                app-name: << parameters.app-name >>
+                process-types: web
+            - release-docker-image:
+                app-name: << parameters.app-name >>
+                process-types: web
+            - steps: << parameters.post-deploy >>
+examples:
+    create_review_app:
+        description: |
+            A sample job that deploys a review app to Heroku, that does not run on the main "deployed" branch. Assumes that your CircleCI token is stored in $CIRCLECI_API_KEY and Heroku's API key under $HEROKU_API_KEY.
+        usage:
+            version: "2.1"
+            orbs:
+                heroku: circleci/heroku@2.0
+            jobs:
+                create-review-app:
+                    executor: heroku/default
+                    steps:
+                        - checkout
+                        - run:
+                            command: tar -czvf my-project.tar.gz ~/project
+                            name: Bundle our project project
+                            working_directory: ~/
+                        - store_artifacts:
+                            path: ~/my-project.tar.gz
+                        - heroku/create-review:
+                            artifact-pattern: '*.tar.gz'
+                            pipeline: PIPELINE-UUID
+            workflows:
+                heroku_review:
+                    jobs:
+                        - create-review-app:
+                            filters:
+                                branches:
+                                    ignore: main
+    use_heroku_commands:
+        description: |
+            'A simple example of a job utilizing the `install` and `deploy-via-git` commands.'
+        usage:
+            version: "2.1"
+            orbs:
+                heroku: circleci/heroku@2.0
+            jobs:
+                deploy:
+                    executor: heroku/default
+                    steps:
+                        - checkout
+                        - heroku/install
+                        - run:
+                            command: |
+                                echo "The command above installs Heroku, the command below deploys. What you do inbetween is up to you!"
+                        - heroku/deploy-via-git
+            workflows:
+                heroku_deploy:
+                    jobs:
+                        - deploy
+    use_heroku_job:
+        description: |
+            Easily deploy to Heroku with a single job supplied by this orb.
+        usage:
+            version: "2.1"
+            orbs:
+                heroku: circleci/heroku@2.0
+            workflows:
+                heroku_deploy:
+                    jobs:
+                        - heroku/deploy-via-git:
+                            post-steps:
+                                - run: your-database-migration-command
+                            pre-steps:
+                                - run: command-that-run-before-deploying
 
-# Invoke jobs via workflows
-# See: https://circleci.com/docs/2.0/configuration-reference/#workflows
-workflows:
-  sample: # This is the name of the workflow, feel free to change it to better match your workflow.
-    # Inside the workflow, you define the jobs you want to run.
-    jobs:
-      - build
