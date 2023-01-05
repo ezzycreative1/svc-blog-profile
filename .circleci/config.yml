@@ -7,12 +7,13 @@ orbs:
 jobs:
   build:
     docker:
-      - image: circleci/golang:1.9
+      - image: circleci/golang:1.19
 
     working_directory: /go/src/github.com/ezzycreative1/svc-blog-profile
     steps:
       - checkout
       - run: go get -v ./...
+      - run: go build -v ./...
       - run: go test -v ./...
 
   deploy:
