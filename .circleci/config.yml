@@ -1,39 +1,28 @@
-# Golang CircleCI 2.0 configuration file
-version: 2
+machine:
+  services:
+    - docker
+  environment:
+    GOPATH: /home/ubuntu/.go_workspace
+    IMPORT_PATH: github.com/$CIRCLE_PROJECT_USERNAME/$CIRCLE_PROJECT_REPONAME
 
-orbs:
-  heroku: circleci/heroku@1.0.0
+general:
+  build_dir: ../.go_workspace/src/$IMPORT_PATH
 
-jobs:
-  build:
-    docker:
-      - image: cimg/go:1.19.0
+checkout:
+  post:
+    - mkdir -p "$GOPATH/src/$IMPORT_PATH"
+    - rsync -azC --delete $HOME/$CIRCLE_PROJECT_REPONAME/ $GOPATH/src/$IMPORT_PATH/
+
+test:
+  override:
+    - go test
     
-    machine: true
-    working_directory: /go/src/github.com/ezzycreative1/svc-blog-profile
-    steps:
-      - checkout
-      - run: go get -v ./...
-      - run: go test -v ./...
+dependencies:
+  override:
+    - echo "Skip go get. Normally you would use godep restore at this point or use vendored dependencies"
 
-  deploy:
-      docker:
-        - image: buildpack-deps:trusty
-      steps:
-        - checkout
-        - run:
-            name: Deploy Master to Heroku
-            command: |
-              git push https://heroku:$HEROKU_KEY@git.heroku.com/svc-blog-profile.git master
-    
-workflows:
-  version: 2
-  build-deploy:
-    jobs:
-      - build
-      - deploy:
-          requires:
-             - build
-          filters:
-            branches:
-              only: master
+deployment:
+  prod:
+    branch: master
+    commands:
+      - make push
