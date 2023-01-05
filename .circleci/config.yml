@@ -27,7 +27,6 @@ jobs:
               git push https://heroku:$HEROKU_KEY@git.heroku.com/svc-blog-profile.git master
     
 workflows:
-  version: 2
   heroku_deploy:
     jobs:
       - build
