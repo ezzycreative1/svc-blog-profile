@@ -1,4 +1,31 @@
 # Golang CircleCI 2.0 configuration file
+version: 2
+
+orbs:
+  heroku: circleci/heroku@1.0.0
+
+jobs:
+  build:
+    docker:
+      - image: cimg/go:1.19.0
+    
+    machine: true
+    working_directory: /go/src/github.com/ezzycreative1/svc-blog-profile
+    steps:
+      - checkout
+      - run: go get -v ./...
+      - run: go test -v ./...
+
+  deploy:
+      docker:
+        - image: buildpack-deps:trusty
+      steps:
+        - checkout
+        - run:
+            name: Deploy Master to Heroku
+            command: |
+              git push https://heroku:$HEROKU_KEY@git.heroku.com/svc-blog-profile.git master
+    
 workflows:
   version: 2
   heroku_deploy:
