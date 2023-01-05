@@ -9,7 +9,7 @@ jobs:
     docker:
       - image: cimg/go:1.19.0
 
-    working_directory: /go/src/github.com/ezzycreative1/svc-blog-profile
+    working_directory: /github.com/ezzycreative1/svc-blog-profile
     steps:
       - checkout
       - run: go get -v ./...
