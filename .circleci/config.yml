@@ -1,28 +1,33 @@
-machine:
-  services:
-    - docker
-  environment:
-    GOPATH: /home/ubuntu/.go_workspace
-    IMPORT_PATH: github.com/$CIRCLE_PROJECT_USERNAME/$CIRCLE_PROJECT_REPONAME
+# Golang CircleCI 2.0 configuration file
+workflows:
+  version: 2
+  heroku_deploy:
+    jobs:
+      - build
+      - heroku/deploy-via-git:  
+          requires:
+            - build
+          filters:
+            branches:
+              only: main
+jobs:
+  build:
+    working_directory: ~/repo
+    docker:
+      - image: cimg/go:1.19.0
+    steps:
+      - checkout
+      - restore_cache:
+          keys:
+            - go-mod-v4-{{ checksum "go.sum" }}
+      - run:
+          name: Install Dependencies
+          command: go get ./...
+      - save_cache:
+          key: go-mod-v4-{{ checksum "go.sum" }}
+          paths:
+            - "/go/pkg/mod"
+      - run:
+          name: Run tests
+          command: go test -v
 
-general:
-  build_dir: ../.go_workspace/src/$IMPORT_PATH
-
-checkout:
-  post:
-    - mkdir -p "$GOPATH/src/$IMPORT_PATH"
-    - rsync -azC --delete $HOME/$CIRCLE_PROJECT_REPONAME/ $GOPATH/src/$IMPORT_PATH/
-
-test:
-  override:
-    - go test
-    
-dependencies:
-  override:
-    - echo "Skip go get. Normally you would use godep restore at this point or use vendored dependencies"
-
-deployment:
-  prod:
-    branch: master
-    commands:
-      - make push
