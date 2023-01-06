@@ -10,9 +10,9 @@ jobs:
           path: ~/go/src/github.com/{USER}/{REPOSITORY_ROOT}
 
       - run: mkdir bin
-      - run: go mod download
+      - run: go get ./...
       - run: go test ./...
-      - run: go build -o bin/blog.exe github.com/{USER}/{REPOSITORY_ROOT}
+      - run: go build -o bin/blog.exe github.com/{USER}/{REPOSITORY_ROOT}/
 
       - store_artifacts:
           path: bin/
