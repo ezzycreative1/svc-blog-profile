@@ -15,6 +15,15 @@ jobs:
       - run:
           name: Test
           command: go test ./...
+  deploy:
+      docker:
+        - image: buildpack-deps:trusty
+      steps:
+        - checkout
+        - run:
+            name: Deploy Master to Heroku
+            command: |
+              git push https://heroku:$HEROKU_KEY@git.heroku.com/go-circle.git master
   build:
     docker:
       - image: cimg/go:1.19
