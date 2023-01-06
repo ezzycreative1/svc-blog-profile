@@ -1,37 +1,19 @@
-# Golang CircleCI 2.0 configuration file
 version: 2
-
-orbs:
-  heroku: circleci/heroku@1.0.0
-
-workflows:
-  heroku_deploy:
-    jobs:
-      - build
-      - heroku/deploy-via-git:  
-          requires:
-            - build
-          filters:
-            branches:
-              only: main
 jobs:
   build:
-    working_directory: ~/repo
+    working_directory: ~/project/go
     docker:
       - image: cimg/go:1.19.0
-    steps:
-      - checkout
-      - restore_cache:
-          keys:
-            - go-mod-v4-{{ checksum "go.sum" }}
-      - run:
-          name: Install Dependencies
-          command: go get ./...
-      - save_cache:
-          key: go-mod-v4-{{ checksum "go.sum" }}
-          paths:
-            - "/go/pkg/mod"
-      - run:
-          name: Run tests
-          command: go test -v
 
+    steps:
+      - checkout:
+          path: ~/project/
+
+      - run: mkdir bin
+      - run: go get -d -v ./...
+      - run: go test -v ./...
+      - run: go build -o bin/blog.exe github.com/{USER}/{REPOSITORY_ROOT}
+
+      - store_artifacts:
+          path: bin/
+          destination: blog-app
