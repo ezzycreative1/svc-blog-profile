@@ -7,7 +7,7 @@ jobs:
 
     steps:
       - checkout:
-          path: ~/project/
+          path: ~/go/src/github.com/{USER}/{REPOSITORY_ROOT}
 
       - run: mkdir bin
       - run: go get ./...
