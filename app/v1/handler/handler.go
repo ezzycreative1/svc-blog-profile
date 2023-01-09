@@ -100,3 +100,59 @@ func (gh *BlogHandler) Refresh(ctx *fiber.Ctx) error {
 func (gh *BlogHandler) Logout(ctx *fiber.Ctx) error {
 	return web.ResponseFormatter(ctx, http.StatusOK, "Success", nil, nil)
 }
+
+func (gh *BlogHandler) UpdateUser(ctx *fiber.Ctx) error {
+	return web.ResponseFormatter(ctx, http.StatusOK, "Success", nil, nil)
+}
+
+func (gh *BlogHandler) DeleteUser(ctx *fiber.Ctx) error {
+	return web.ResponseFormatter(ctx, http.StatusOK, "Success", nil, nil)
+}
+
+func (gh *BlogHandler) FetchUser(ctx *fiber.Ctx) error {
+	return web.ResponseFormatter(ctx, http.StatusOK, "Success", nil, nil)
+}
+
+func (gh *BlogHandler) GetUser(ctx *fiber.Ctx) error {
+	return web.ResponseFormatter(ctx, http.StatusOK, "Success", nil, nil)
+}
+
+func (gh *BlogHandler) CreateArticle(ctx *fiber.Ctx) error {
+	return web.ResponseFormatter(ctx, http.StatusOK, "Success", nil, nil)
+}
+
+func (gh *BlogHandler) UpdateArticle(ctx *fiber.Ctx) error {
+	return web.ResponseFormatter(ctx, http.StatusOK, "Success", nil, nil)
+}
+
+func (gh *BlogHandler) FetchArticle(ctx *fiber.Ctx) error {
+	return web.ResponseFormatter(ctx, http.StatusOK, "Success", nil, nil)
+}
+
+func (gh *BlogHandler) GetArticle(ctx *fiber.Ctx) error {
+	return web.ResponseFormatter(ctx, http.StatusOK, "Success", nil, nil)
+}
+
+func (gh *BlogHandler) DeleteArticle(ctx *fiber.Ctx) error {
+	return web.ResponseFormatter(ctx, http.StatusOK, "Success", nil, nil)
+}
+
+func (gh *BlogHandler) CreateComment(ctx *fiber.Ctx) error {
+	return web.ResponseFormatter(ctx, http.StatusOK, "Success", nil, nil)
+}
+
+func (gh *BlogHandler) UpdateComment(ctx *fiber.Ctx) error {
+	return web.ResponseFormatter(ctx, http.StatusOK, "Success", nil, nil)
+}
+
+func (gh *BlogHandler) FetchComment(ctx *fiber.Ctx) error {
+	return web.ResponseFormatter(ctx, http.StatusOK, "Success", nil, nil)
+}
+
+func (gh *BlogHandler) GetComment(ctx *fiber.Ctx) error {
+	return web.ResponseFormatter(ctx, http.StatusOK, "Success", nil, nil)
+}
+
+func (gh *BlogHandler) DeleteComment(ctx *fiber.Ctx) error {
+	return web.ResponseFormatter(ctx, http.StatusOK, "Success", nil, nil)
+}

@@ -62,6 +62,7 @@ func (uc *userUseCase) Register(ctx context.Context, input dtos.RegisterRequestB
 		LastName:  input.Lastname,
 		Email:     input.Email,
 		Password:  password,
+		RoleID:    0, //DEFAULT
 		Status:    1,
 		CreatedAt: time.Now(),
 		UpdatedAt: time.Now(),
