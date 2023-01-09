@@ -76,14 +76,14 @@ func New() *mValidator {
 
 	// register additional func validation here << ---- <<
 
-	_ = validate.RegisterTranslation("majoodate", trans, func(ut ut.Translator) error {
-		return ut.Add("majoodate", "{0} must be valid date format", true)
+	_ = validate.RegisterTranslation("date", trans, func(ut ut.Translator) error {
+		return ut.Add("date", "{0} must be valid date format", true)
 	}, func(ut ut.Translator, fe validator.FieldError) string {
-		t, _ := ut.T("majoodate", fe.Field())
+		t, _ := ut.T("date", fe.Field())
 		return t
 	})
 
-	_ = validate.RegisterValidation("majoodate", func(fl validator.FieldLevel) bool {
+	_ = validate.RegisterValidation("date", func(fl validator.FieldLevel) bool {
 		str := fl.Field().String()
 		layout := "2006-01-02 15:04:05"
 		_, err := time.Parse(layout, str)
