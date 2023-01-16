@@ -43,6 +43,37 @@ func (uc *userUseCase) passwordValidator(password string) (bool, error) {
 	}
 }
 
+// func getRoleName(id int64) string {
+// 	var roleName string
+// 	switch id {
+// 	case 0:
+// 		roleName = "user"
+// 	case 1:
+// 		roleName = "superadmin"
+// 	case 2:
+// 		roleName = "admin"
+// 	case 3:
+// 		roleName = "viewer"
+// 	}
+
+// 	return roleName
+// }
+
+// func (uc *userUseCase) getRoleID(name string) int64 {
+// 	var roleID int64
+// 	switch name {
+// 	case "User":
+// 		roleID = 0
+// 	case "Superadmin":
+// 		roleID = 1
+// 	case "Admin":
+// 		roleID = 2
+// 	case "Viewer":
+// 		roleID = 3
+// 	}
+// 	return roleID
+// }
+
 func (uc *userUseCase) Register(ctx context.Context, input dtos.RegisterRequestBody) error {
 	if input.Password != input.ConfirmPassword {
 		return errs.ErrPasswordMatch
@@ -58,19 +89,20 @@ func (uc *userUseCase) Register(ctx context.Context, input dtos.RegisterRequestB
 	}
 
 	data := entities.Users{
-		FirstName: input.Firstname,
-		LastName:  input.Lastname,
-		Email:     input.Email,
-		Password:  password,
-		RoleID:    0, //DEFAULT
-		Status:    1,
-		CreatedAt: time.Now(),
-		UpdatedAt: time.Now(),
+		FirstName:   input.Firstname,
+		LastName:    input.Lastname,
+		Email:       input.Email,
+		Password:    password,
+		PhoneNumber: input.PhoneNumber,
+		IsActive:    1,
+		CreatedAt:   time.Now(),
+		UpdatedAt:   time.Now(),
 	}
 
 	if err := uc.Repo.StoreUser(ctx, data); err != nil {
 		return err
 	}
+
 	return nil
 }
 
@@ -113,4 +145,56 @@ func (uc *userUseCase) Login(ctx context.Context, input dtos.LoginRequestBody) (
 		RefreshToken: refresh_token,
 	}
 	return &response, nil
+}
+
+func (uc *userUseCase) UpdateUser(ctx context.Context, id int64, input dtos.UpdateUserRequestBody) error {
+	userdata, err := uc.Repo.GetUserById(ctx, id)
+	if err != nil {
+		return errs.ErrNotFound
+	}
+
+	data := entities.Users{
+		FirstName:   input.Firstname,
+		LastName:    input.Lastname,
+		Email:       input.Email,
+		Password:    userdata.Password,
+		PhoneNumber: input.PhoneNumber,
+		IsActive:    userdata.IsActive,
+		CreatedAt:   userdata.CreatedAt,
+		UpdatedAt:   time.Now(),
+	}
+
+	if err := uc.Repo.UpdateUser(ctx, data); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (uc *userUseCase) DeleteUser(ctx context.Context, id int64) error {
+	userdata, err := uc.Repo.GetUserById(ctx, id)
+	if err != nil {
+		return errs.ErrNotFound
+	}
+
+	if err := uc.Repo.DeleteUser(ctx, userdata, id); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (uc *userUseCase) GetUserByID(ctx context.Context, id int64) (*dtos.UserResponseBody, error) {
+	userdata, err := uc.Repo.GetUserById(ctx, id)
+	if err != nil {
+		return nil, errs.ErrNotFound
+	}
+	result := dtos.UserResponseBody{
+		Firstname:   userdata.FirstName,
+		Lastname:    userdata.LastName,
+		Email:       userdata.Email,
+		PhoneNumber: userdata.PhoneNumber,
+		IsActive:    userdata.IsActive,
+	}
+	return &result, nil
 }

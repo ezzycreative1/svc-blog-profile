@@ -5,7 +5,7 @@ import (
 
 	"github.com/ezzycreative1/svc-blog-profile/app/v1/handler"
 	"github.com/ezzycreative1/svc-blog-profile/internal/domain/usecase"
-	"github.com/ezzycreative1/svc-blog-profile/internal/infrastructure/persistence/mysql"
+	"github.com/ezzycreative1/svc-blog-profile/internal/infrastructure/persistence/postgresql"
 	"github.com/ezzycreative1/svc-blog-profile/pkg/web"
 	"github.com/gofiber/fiber/v2"
 )
@@ -17,11 +17,11 @@ const (
 
 func LoadRoute(app *app) {
 	// init dependency
-	userRepos := mysql.NewUserRepository(app.database, keyTransaction, timeout)
+	userRepos := postgresql.NewUserRepository(app.database, keyTransaction, timeout)
 	userUCase := usecase.NewUserUsecase(
 		userRepos,
 	)
-	blogHandler := handler.NewBlogHandler(
+	userHandler := handler.NewUserHandler(
 		userUCase,
 		app.validator,
 		app.logger,
@@ -39,8 +39,8 @@ func LoadRoute(app *app) {
 
 	g := app.fiber.Group("/v1/blog")
 	//router role
-	g.Post("/user", blogHandler.Register)
-	g.Post("/user/login", blogHandler.Login)
+	g.Post("/user", userHandler.Register)
+	g.Post("/user/login", userHandler.Login)
 	// g.GET("/roles", pokemonHandler.FetchRoles)
 	// g.PUT("/role/:id", pokemonHandler.UpdateRole)
 	// g.GET("/role/:id", pokemonHandler.GetRoleByID)

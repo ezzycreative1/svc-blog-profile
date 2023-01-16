@@ -23,6 +23,12 @@ contoh dalam linux :
 ```shell
 export BLOG_DB_DSN='mysql://user:password@tcp(localhost:3306)/db-name?charset=utf8&parseTime=True&loc=Local&x-no-lock=true'
 ```  
+```shell
+export BLOG_DB_DSN='postgres://user:password@host:port/db-name?query'
+```
+```shell
+export BLOG_DB_DSN='mongodb://user:password@host:port/dbname?query'
+```
 
 ## Migrate create
 Membuat file migrasi yang diisikan DDL sql. sebagai contoh nama file yang digunakan adalah create_iap_table.  

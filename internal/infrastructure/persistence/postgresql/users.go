@@ -1,7 +1,8 @@
-package mysql
+package postgresql
 
 import (
 	"context"
+	"errors"
 	"time"
 
 	"github.com/ezzycreative1/svc-blog-profile/internal/domain/model/entities"
@@ -79,4 +80,41 @@ func (ur *userRepository) GetUserByEmail(ctx context.Context, Email string) (*en
 	}
 
 	return &userdata, nil
+}
+
+func (ur *userRepository) UpdateUser(ctx context.Context, input entities.Users) error {
+	trx, ok := ctx.Value(ur.KeyTransaction).(*gorm.DB)
+	if !ok {
+		trx = ur.DB
+	}
+	if input.ID == 0 {
+		return errors.New("users to update must have id")
+	}
+
+	ctxWT, cancel := context.WithTimeout(ctx, ur.timeout)
+	defer cancel()
+
+	query := trx.WithContext(ctxWT).Save(&input)
+	if query.Error != nil {
+		return query.Error
+	}
+
+	return nil
+}
+
+func (ur *userRepository) DeleteUser(ctx context.Context, input *entities.Users, id int64) error {
+	trx, ok := ctx.Value(ur.KeyTransaction).(*gorm.DB)
+	if !ok {
+		trx = ur.DB
+	}
+
+	ctxWT, cancel := context.WithTimeout(ctx, ur.timeout)
+	defer cancel()
+
+	query := trx.WithContext(ctxWT).Delete(&input, id)
+	if query.Error != nil {
+		return query.Error
+	}
+
+	return nil
 }

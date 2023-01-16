@@ -50,6 +50,32 @@ func (d *Database) DBConfig() *MySQLConfig {
 	}
 }
 
+type PsqlConfig struct {
+	Host            string
+	Port            int
+	User            string
+	Password        string
+	Schema          string
+	MaxIdleConns    int
+	MaxOpenConns    int
+	ConnMaxLifetime int
+	Environment     string
+}
+
+func (d *Database) DBPsqlConfig() *PsqlConfig {
+	return &PsqlConfig{
+		Host:            d.Host,
+		Port:            d.Port,
+		User:            d.Username,
+		Password:        d.Password,
+		Schema:          d.Schema,
+		MaxIdleConns:    d.MaxIdle,
+		MaxOpenConns:    d.MaxConn,
+		ConnMaxLifetime: d.ConnMaxLifetime,
+		Environment:     d.Environment,
+	}
+}
+
 type Redis struct {
 	Host         string `json:"host,omitempty"`
 	Port         int    `json:"port,omitempty"`

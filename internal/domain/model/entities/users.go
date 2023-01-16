@@ -11,8 +11,7 @@ type Users struct {
 	Email       string    `json:"email"`
 	Password    string    `json:"password"`
 	PhoneNumber string    `json:"phone_number"`
-	RoleID      int64     `json:"role_id"`
-	Status      int       `json:"status"`
+	IsActive    int       `json:"is_active"`
 	CreatedAt   time.Time `json:"created_at"`
 	UpdatedAt   time.Time `json:"updated_at"`
 }
@@ -21,16 +20,16 @@ func (u Users) TableName() string {
 	return "users"
 }
 
-func NewUsers(id int64, firstname, lastname, email, password string, roleid int64, status int) *Users {
+func NewUsers(id int64, firstname, lastname, email, password, phone_number string, isActive int) *Users {
 	return &Users{
-		ID:        id,
-		FirstName: firstname,
-		LastName:  lastname,
-		Email:     email,
-		Password:  password,
-		RoleID:    roleid,
-		Status:    status,
-		CreatedAt: time.Now(),
-		UpdatedAt: time.Now(),
+		ID:          id,
+		FirstName:   firstname,
+		LastName:    lastname,
+		Email:       email,
+		Password:    password,
+		PhoneNumber: phone_number,
+		IsActive:    isActive,
+		CreatedAt:   time.Now(),
+		UpdatedAt:   time.Now(),
 	}
 }

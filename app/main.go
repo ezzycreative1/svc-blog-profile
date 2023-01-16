@@ -13,7 +13,9 @@ import (
 	"github.com/ezzycreative1/svc-blog-profile/pkg/db"
 	"github.com/ezzycreative1/svc-blog-profile/pkg/mlog"
 	"github.com/ezzycreative1/svc-blog-profile/pkg/mvalidator"
+	"github.com/getsentry/sentry-go"
 	"github.com/gofiber/fiber/v2"
+	"github.com/gofiber/fiber/v2/utils"
 	"gorm.io/gorm"
 )
 
@@ -26,6 +28,27 @@ type app struct {
 }
 
 func main() {
+	err := sentry.Init(sentry.ClientOptions{
+		Dsn: os.Getenv("SENTRY_DSN"),
+		BeforeSend: func(event *sentry.Event, hint *sentry.EventHint) *sentry.Event {
+			if hint.Context != nil {
+				if c, ok := hint.Context.Value(sentry.RequestContextKey).(*fiber.Ctx); ok {
+					// You have access to the original Context if it panicked
+					fmt.Println(utils.ImmutableString(c.Hostname()))
+				}
+			}
+			fmt.Println(event)
+			return event
+		},
+		Debug:            true,
+		AttachStacktrace: true,
+	})
+	if err != nil {
+		log.Fatalf("sentry.Init: %s", err)
+	}
+	// Flush buffered events before the program terminates.
+	defer sentry.Flush(2 * time.Second)
+
 	// load config
 	cfg := config.LoadConfig()
 
@@ -33,7 +56,8 @@ func main() {
 	logger := mlog.New("info", "stdout")
 
 	// init database
-	database := db.NewDatabase(&cfg.Database)
+	//database := db.NewDatabase(&cfg.Database)
+	database := db.NewPsqlConnection(&cfg.BlogDatabase)
 	instDB, _ := database.DB()
 	defer instDB.Close()
 

@@ -18,7 +18,7 @@ func RequestID(next fiber.Handler) fiber.Handler {
 		if requestID == "" {
 			requestID = uuid.NewString()
 		}
-		c.Set(requestIDKey, requestID) // set to context echo
+		c.Set(requestIDKey, requestID) // set to context
 		return next(c)
 	}
 }
@@ -31,7 +31,7 @@ func GetID(ctx *fiber.Ctx) string {
 	return requestID
 }
 
-// Because fiber request context is not included value from echo.Context
+// Because fiber request context is not included value from gofiber.Context
 // we need to build this method, hiks.
 type keyCtx string
 
