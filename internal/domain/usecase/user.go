@@ -95,8 +95,8 @@ func (uc *userUseCase) Register(ctx context.Context, input dtos.RegisterRequestB
 		Password:    password,
 		PhoneNumber: input.PhoneNumber,
 		IsActive:    1,
-		CreatedAt:   time.Now(),
-		UpdatedAt:   time.Now(),
+		CreatedAt:   time.Now().UnixNano(),
+		UpdatedAt:   time.Now().UnixNano(),
 	}
 
 	if err := uc.Repo.StoreUser(ctx, data); err != nil {
@@ -161,7 +161,7 @@ func (uc *userUseCase) UpdateUser(ctx context.Context, id int64, input dtos.Upda
 		PhoneNumber: input.PhoneNumber,
 		IsActive:    userdata.IsActive,
 		CreatedAt:   userdata.CreatedAt,
-		UpdatedAt:   time.Now(),
+		UpdatedAt:   time.Now().UnixNano(),
 	}
 
 	if err := uc.Repo.UpdateUser(ctx, data); err != nil {
