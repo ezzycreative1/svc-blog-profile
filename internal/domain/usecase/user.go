@@ -10,16 +10,21 @@ import (
 	"github.com/ezzycreative1/svc-blog-profile/internal/domain/ports"
 	"github.com/ezzycreative1/svc-blog-profile/pkg/errs"
 	"github.com/ezzycreative1/svc-blog-profile/pkg/mid"
+	"github.com/ezzycreative1/svc-blog-profile/pkg/mlog"
 	"github.com/ezzycreative1/svc-blog-profile/pkg/mvalidator"
 )
 
 type userUseCase struct {
-	Repo ports.IUserRepository
+	Repo          ports.IUserRepository
+	QueueUserRepo ports.IQueueUserRepository
+	Logger        mlog.Logger
 }
 
-func NewUserUsecase(repo ports.IUserRepository) *userUseCase {
+func NewUserUsecase(repo ports.IUserRepository, queueUserRepo ports.IQueueUserRepository, logger mlog.Logger) *userUseCase {
 	return &userUseCase{
-		Repo: repo,
+		Repo:          repo,
+		QueueUserRepo: queueUserRepo,
+		Logger:        logger,
 	}
 }
 
@@ -74,18 +79,18 @@ func (uc *userUseCase) passwordValidator(password string) (bool, error) {
 // 	return roleID
 // }
 
-func (uc *userUseCase) Register(ctx context.Context, input dtos.RegisterRequestBody) error {
+func (uc *userUseCase) Register(ctx context.Context, input dtos.RegisterRequestBody) (*dtos.RegisterResponseBody, error) {
 	if input.Password != input.ConfirmPassword {
-		return errs.ErrPasswordMatch
+		return nil, errs.ErrPasswordMatch
 	}
 
 	if validated, err := uc.passwordValidator(input.Password); !validated {
-		return err
+		return nil, err
 	}
 
 	password, err := mid.HashPassword(input.Password)
 	if err != nil {
-		return err
+		return nil, err
 	}
 
 	data := entities.Users{
@@ -94,16 +99,30 @@ func (uc *userUseCase) Register(ctx context.Context, input dtos.RegisterRequestB
 		Email:       input.Email,
 		Password:    password,
 		PhoneNumber: input.PhoneNumber,
+		RoleID:      3,
 		IsActive:    1,
+		VerifyToken: mid.GenerateRandString(50),
 		CreatedAt:   time.Now().UnixNano(),
 		UpdatedAt:   time.Now().UnixNano(),
 	}
 
 	if err := uc.Repo.StoreUser(ctx, data); err != nil {
-		return err
+		return nil, err
 	}
 
-	return nil
+	go func() {
+		if err := uc.QueueUserRepo.AddUserToQueue(ctx, data.ID, data.VerifyToken); err != nil {
+			uc.Logger.ErrorT("", "panic: cannot add to redis", err)
+		}
+	}()
+	//cache.Set(key, request.Email, time.Duration(15*time.Minute))
+
+	response := dtos.RegisterResponseBody{
+		UserID:      data.ID,
+		VerifyToken: data.VerifyToken,
+	}
+
+	return &response, nil
 }
 
 func (uc *userUseCase) Login(ctx context.Context, input dtos.LoginRequestBody) (*dtos.LoginResponseBody, error) {

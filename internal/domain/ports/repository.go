@@ -13,9 +13,15 @@ type IUserRepository interface {
 	UpdateUser(ctx context.Context, input entities.Users) error
 	DeleteUser(ctx context.Context, input *entities.Users, id int64) error
 }
-
 type IRoleRepository interface {
 	GetRoleById(ctx context.Context, RoleID int64) (*entities.Roles, error)
 	GetRoleByName(ctx context.Context, Name string) (*entities.Roles, error)
 	StoreRole(ctx context.Context, input entities.Roles) error
+}
+
+type IQueueUserRepository interface {
+	AddUserToQueue(ctx context.Context, userID int64, token string) error
+	CheckUserExist(ctx context.Context, userID int64, token string) (bool, error)
+	GetUserValue(ctx context.Context, userID int64, token string) (string, error)
+	RemoveUserFromQueue(ctx context.Context, userID int64, token string) error
 }

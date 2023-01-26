@@ -38,3 +38,8 @@ type UserResponseBody struct {
 	PhoneNumber string `json:"phone_number"`
 	IsActive    int    `json:"is_active"`
 }
+
+type RegisterResponseBody struct {
+	UserID      int64  `json:"user_id"`
+	VerifyToken string `json:"verify_token"`
+}

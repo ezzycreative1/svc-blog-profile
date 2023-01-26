@@ -6,6 +6,7 @@ import (
 	"github.com/ezzycreative1/svc-blog-profile/app/v1/handler"
 	"github.com/ezzycreative1/svc-blog-profile/internal/domain/usecase"
 	"github.com/ezzycreative1/svc-blog-profile/internal/infrastructure/persistence/postgresql"
+	"github.com/ezzycreative1/svc-blog-profile/internal/infrastructure/persistence/redis"
 	"github.com/ezzycreative1/svc-blog-profile/pkg/web"
 	"github.com/gofiber/fiber/v2"
 )
@@ -18,8 +19,10 @@ const (
 func LoadRoute(app *app) {
 	// init dependency
 	userRepos := postgresql.NewUserRepository(app.database, keyTransaction, timeout)
+	queueUserRepos := redis.NewQueueUserRepo(app.redis)
 	userUCase := usecase.NewUserUsecase(
 		userRepos,
+		queueUserRepos,
 	)
 	userHandler := handler.NewUserHandler(
 		userUCase,

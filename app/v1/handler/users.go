@@ -57,12 +57,13 @@ func (uh *UserHandler) Register(ctx *fiber.Ctx) error {
 		return web.ResponseErrValidation(ctx, "bad request", mapErr)
 	}
 
-	if err := uh.UseCaseUsers.Register(userCtx, payload); err != nil {
+	data, err := uh.UseCaseUsers.Register(userCtx, payload)
+	if err != nil {
 		uh.Logger.ErrorT(requestID, "error register data", err)
 		return web.ResponseFormatter(ctx, http.StatusBadRequest, err.Error(), nil, err)
 	}
 
-	return web.ResponseFormatter(ctx, http.StatusOK, "Success", nil, nil)
+	return web.ResponseFormatter(ctx, http.StatusOK, "Success", data, nil)
 }
 
 func (uh *UserHandler) Login(ctx *fiber.Ctx) error {

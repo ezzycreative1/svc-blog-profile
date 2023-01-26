@@ -14,6 +14,7 @@ import (
 	"github.com/ezzycreative1/svc-blog-profile/pkg/mlog"
 	"github.com/ezzycreative1/svc-blog-profile/pkg/mvalidator"
 	"github.com/getsentry/sentry-go"
+	"github.com/go-redis/redis/v8"
 	"github.com/gofiber/fiber/v2"
 	"github.com/gofiber/fiber/v2/utils"
 	"gorm.io/gorm"
@@ -24,6 +25,7 @@ type app struct {
 	cfg       *config.Group
 	logger    mlog.Logger
 	database  *gorm.DB
+	redis     *redis.Client
 	validator mvalidator.Validator
 }
 
@@ -61,6 +63,8 @@ func main() {
 	instDB, _ := database.DB()
 	defer instDB.Close()
 
+	redis := db.NewRedis(&cfg.Redis)
+
 	// init validator
 	mValidator := mvalidator.New()
 
@@ -74,6 +78,7 @@ func main() {
 		cfg:       cfg,
 		logger:    logger,
 		database:  database,
+		redis:     redis,
 		validator: mValidator,
 	}
 

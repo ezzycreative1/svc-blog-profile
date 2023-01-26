@@ -7,7 +7,7 @@ import (
 )
 
 type IUserUsecase interface {
-	Register(ctx context.Context, input dtos.RegisterRequestBody) error
+	Register(ctx context.Context, input dtos.RegisterRequestBody) (*dtos.RegisterResponseBody, error)
 	Login(ctx context.Context, input dtos.LoginRequestBody) (*dtos.LoginResponseBody, error)
 	UpdateUser(ctx context.Context, id int64, input dtos.UpdateUserRequestBody) error
 	DeleteUser(ctx context.Context, id int64) error
