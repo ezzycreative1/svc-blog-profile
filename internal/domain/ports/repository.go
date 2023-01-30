@@ -20,8 +20,8 @@ type IRoleRepository interface {
 }
 
 type IQueueUserRepository interface {
-	AddUserToQueue(ctx context.Context, userID int64, token string) error
-	CheckUserExist(ctx context.Context, userID int64, token string) (bool, error)
-	GetUserValue(ctx context.Context, userID int64, token string) (string, error)
-	RemoveUserFromQueue(ctx context.Context, userID int64, token string) error
+	StoreUserToQueue(ctx context.Context, userID, roleID int64, token, email string) error
+	CheckUserExist(ctx context.Context, userID, roleID int64, token, email string) (bool, error)
+	GetUserValue(ctx context.Context, userID, roleID int64, token, email string) (string, error)
+	RemoveUserFromQueue(ctx context.Context, userID, roleID int64, token, email string) error
 }

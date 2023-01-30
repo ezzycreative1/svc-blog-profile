@@ -40,6 +40,6 @@ type UserResponseBody struct {
 }
 
 type RegisterResponseBody struct {
-	UserID      int64  `json:"user_id"`
-	VerifyToken string `json:"verify_token"`
+	UserID int64  `json:"user_id"`
+	Token  string `json:"token"`
 }

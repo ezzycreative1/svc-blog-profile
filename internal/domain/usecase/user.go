@@ -111,15 +111,14 @@ func (uc *userUseCase) Register(ctx context.Context, input dtos.RegisterRequestB
 	}
 
 	go func() {
-		if err := uc.QueueUserRepo.AddUserToQueue(ctx, data.ID, data.VerifyToken); err != nil {
+		if err := uc.QueueUserRepo.StoreUserToQueue(ctx, data.ID, data.RoleID, data.VerifyToken, data.Email); err != nil {
 			uc.Logger.ErrorT("", "panic: cannot add to redis", err)
 		}
 	}()
-	//cache.Set(key, request.Email, time.Duration(15*time.Minute))
 
 	response := dtos.RegisterResponseBody{
-		UserID:      data.ID,
-		VerifyToken: data.VerifyToken,
+		UserID: data.ID,
+		Token:  data.VerifyToken,
 	}
 
 	return &response, nil

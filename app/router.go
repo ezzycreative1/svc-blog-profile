@@ -19,10 +19,11 @@ const (
 func LoadRoute(app *app) {
 	// init dependency
 	userRepos := postgresql.NewUserRepository(app.database, keyTransaction, timeout)
-	queueUserRepos := redis.NewQueueUserRepo(app.redis)
+	queueUserRepos := redis.NewQueueUserRepo(*app.redis)
 	userUCase := usecase.NewUserUsecase(
 		userRepos,
 		queueUserRepos,
+		app.logger,
 	)
 	userHandler := handler.NewUserHandler(
 		userUCase,

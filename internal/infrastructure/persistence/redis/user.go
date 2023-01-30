@@ -14,27 +14,27 @@ const (
 )
 
 type queueUserRepo struct {
-	redis *redis.Client
+	redis redis.Client
 }
 
-func NewQueueUserRepo(redis *redis.Client) *queueUserRepo {
+func NewQueueUserRepo(redis redis.Client) *queueUserRepo {
 	return &queueUserRepo{
 		redis: redis,
 	}
 }
 
-func (qr *queueUserRepo) AddUserToQueue(ctx context.Context, userID int64, token, transactionDate string) error {
-	key := fmt.Sprintf("%d-%s", userID, token)
+func (qr *queueUserRepo) StoreUserToQueue(ctx context.Context, userID, roleID int64, token, email string) error {
+	key := fmt.Sprintf("%d-%d-%s", userID, roleID, token)
 
 	ctxWT, cancel := context.WithTimeout(ctx, timeOut)
 	defer cancel()
 
-	return qr.redis.Set(ctxWT, key, transactionDate, time.Duration(time.Minute*expiredMinnute)).Err()
+	return qr.redis.Set(ctxWT, key, email, time.Duration(time.Minute*expiredMinnute)).Err()
 }
 
-// CheckQueue return true if value exist in cache
-func (qr *queueUserRepo) CheckUserExist(ctx context.Context, userID int64, token string) (bool, error) {
-	key := fmt.Sprintf("%d-%s", userID, token)
+// CheckUserExist return true if value exist in cache
+func (qr *queueUserRepo) CheckUserExist(ctx context.Context, userID, roleID int64, token, email string) (bool, error) {
+	key := fmt.Sprintf("%d-%d-%s", userID, roleID, token)
 	_, err := qr.redis.Get(ctx, key).Result()
 	if err != nil {
 		if err == redis.Nil {
@@ -45,13 +45,13 @@ func (qr *queueUserRepo) CheckUserExist(ctx context.Context, userID int64, token
 	return true, nil
 }
 
-func (qr *queueUserRepo) GetUserValue(ctx context.Context, userID int64, token string) (string, error) {
-	key := fmt.Sprintf("%d-%s", userID, token)
+func (qr *queueUserRepo) GetUserValue(ctx context.Context, userID, roleID int64, token, email string) (string, error) {
+	key := fmt.Sprintf("%d-%d-%s", userID, roleID, token)
 	return qr.redis.Get(ctx, key).Result()
 }
 
-func (qr *queueUserRepo) RemoveUserFromQueue(ctx context.Context, userID int64, token string) error {
-	key := fmt.Sprintf("%d-%s", userID, token)
+func (qr *queueUserRepo) RemoveUserFromQueue(ctx context.Context, userID, roleID int64, token, email string) error {
+	key := fmt.Sprintf("%d-%d-%s", userID, roleID, token)
 
 	ctxWT, cancel := context.WithTimeout(ctx, timeOut)
 	defer cancel()
